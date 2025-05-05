@@ -119,3 +119,5 @@ There must be N-1 names where N is the number of ranges (i.e. the `NumArrays` va
 ## A3DZ
 
 The A3DZ format follows the same layout as an A3D but each attribute is compressed using a combination of techniques.
+
+> Work in progress
