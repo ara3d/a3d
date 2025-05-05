@@ -61,3 +61,61 @@ Each buffer associates elements with either of the following:
 - UUID - 128 bit universally unique id - 16 bytes
 - Byte - 8 bit unsigned integer - 1 byte
 - Float32 - 1 single precision float - 4 bytes
+
+# Binary Layout 
+
+The binary layout of the A3D buffers follows the [BFAST specification](https://github.com/vimaec/bfast).
+
+The file format consists of three sections:
+
+* Header - Fixed size descriptor (32 bytes) describing the file contents   
+* Ranges - An array of offset pairs indicating the begin and end of each buffer (relative to file begin) 
+* Data   - 64-byte aligned data buffers 
+
+## Header Section
+
+The header is a 32-byte struct with the following layout:  
+
+```
+    [StructLayout(LayoutKind.Explicit, Pack = 8, Size = 32)]
+    public struct Header
+    {
+        [FieldOffset(0)]    public long Magic;         // 0xBFA5
+        [FieldOffset(8)]    public long DataStart;     // <= File size and >= 32 + Sizeof(Range) * NumArrays 
+        [FieldOffset(16)]   public long DataEnd;       // >= DataStart and <= file size
+        [FieldOffset(24)]   public long NumArrays;     // Number of all buffers, including name buffer
+    }
+```
+
+## Ranges Section
+
+The ranges start at byte 32. There are `NumArrays` of them and they have the following format. 
+`NumArrays` is the total count of all buffers, including the first buffer that contains the names.
+`NumArrays` should always be equal to or greater than one. Each `Begin` and `End` values are byte 
+offsets relative to the beginning of the file.
+
+```
+    [StructLayout(LayoutKind.Explicit, Pack = 8, Size = 16)]
+    public struct Range
+    {
+        [FieldOffset(0)] public long Begin;
+        [FieldOffset(8)] public long End;
+    }		
+```
+
+## Data Section
+
+The data section starts at the first 64 byte aligned address immediately following the last `Range` value.
+This value is stored for validation purposes in the header as `DataStart`. 
+
+### Names Buffer
+
+The first data buffer contain the names of the subsequent buffers as a concatenated list of Utf-8 encoded 
+strings separated by null characters. Names may be zero-length and are not guaranteed to be unique. 
+A name may contain any Utf-8 encoded character except the null character. 
+
+There must be N-1 names where N is the number of ranges (i.e. the `NumArrays` value in header). 
+
+## A3DZ
+
+The A3DZ format follows the same layout as an A3D but each attribute is compressed using a combination of techniques.
